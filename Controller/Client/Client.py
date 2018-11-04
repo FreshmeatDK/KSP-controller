@@ -7,7 +7,7 @@ import struct
 
 conn = krpc.connect(name='Experiments')
 
-arduino = serial.Serial('COM4', 9600)
+arduino = serial.Serial('COM4', 28800)
 
 def main_loop():
     global conn
@@ -17,36 +17,31 @@ def main_loop():
     altitude = conn.add_stream(getattr, vessel.orbit, 'speed')
 
     i = 0
+    inlenght = 7
     connected = False
+    intup = struct.Struct('b b b b b b B')
 
     try:
         while vessel == conn.space_center.active_vessel:
             #print(apoapsis())
-            #print(altitude())
+
             #while not connected:
             #    serIn = arduino.read(1)
             #    connected = True
             
             apv = float(apoapsis())
             altv= float(altitude())
-
+          
             arduino.write(struct.pack('<ff', apv, altv))
             #print(struct.pack('<ff', apv, altv))
-            i = i+1
-            
-            if i > 9:
-                i = 0
-            arduino_ready = False
-            while not arduino_ready:
-                serIn = arduino.read(1)
-                arduino_ready = True
-            intup = struct.unpack('<B', serIn)
-            thr = intup[0]/256
-            if thr < 0.02:
-                thr = 0
-            print(thr)
-            vessel.control.throttle = thr
+            print(altv)
 
+            while arduino.in_waiting !=inlenght:
+                pass
+            
+            intup = struct.unpack('<bbbbbbB',arduino.read(inlenght))
+
+            
                 
 
 
