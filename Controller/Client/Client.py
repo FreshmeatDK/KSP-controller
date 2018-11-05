@@ -17,9 +17,9 @@ def main_loop():
     altitude = conn.add_stream(getattr, vessel.orbit, 'speed')
 
     i = 0
-    inlenght = 7
+    inlenght = 8
     connected = False
-    intup = struct.Struct('b b b b b b B')
+    intup =[0,0,0,0,0,0,0] #struct.Struct('b b b b b b B')
 
     try:
         while vessel == conn.space_center.active_vessel:
@@ -34,12 +34,23 @@ def main_loop():
           
             arduino.write(struct.pack('<ff', apv, altv))
             #print(struct.pack('<ff', apv, altv))
-            print(altv)
+            #print(altv)
 
-            while arduino.in_waiting !=inlenght:
-                pass
+            i = 0
+
+            while i < 1000:
+                #print(i)
+                if arduino.in_waiting !=inlenght:
+                    i = i+1
+                    #print(arduino.in_waiting)
+                if arduino.in_waiting == inlenght:
+                    #print(i)
+                    i = 1000
+                    intup = struct.unpack('<bbbbbbbb',arduino.read(inlenght))
+
             
-            intup = struct.unpack('<bbbbbbB',arduino.read(inlenght))
+            thr = int(intup[5])
+            print(intup)
 
             
                 
