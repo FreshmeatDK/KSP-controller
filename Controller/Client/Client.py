@@ -5,7 +5,13 @@ import time
 import serial
 import struct
 
-conn = krpc.connect(name='Experiments')
+import joysticks
+
+conn = krpc.connect(name='Controller')
+vessel = conn.space_center.active_vessel
+refframe = vessel.orbit.body.reference_frame
+apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis')
+altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
 
 arduino = serial.Serial('COM4', 28800)
 
@@ -13,45 +19,33 @@ def main_loop():
     global conn
     global vessel
     
-    apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis')
-    altitude = conn.add_stream(getattr, vessel.orbit, 'speed')
+
 
     i = 0
-    inlenght = 8
+    inlenght = 7
     connected = False
-    intup =[0,0,0,0,0,0,0] #struct.Struct('b b b b b b B')
 
     try:
         while vessel == conn.space_center.active_vessel:
-            #print(apoapsis())
 
-            #while not connected:
-            #    serIn = arduino.read(1)
-            #    connected = True
-            
             apv = float(apoapsis())
             altv= float(altitude())
           
             arduino.write(struct.pack('<ff', apv, altv))
-            #print(struct.pack('<ff', apv, altv))
-            #print(altv)
 
             i = 0
 
             while i < 1000:
-                #print(i)
+          
                 if arduino.in_waiting !=inlenght:
-                    i = i+1
-                    #print(arduino.in_waiting)
+                   i = i+1
+                   print(arduino.in_waiting)
                 if arduino.in_waiting == inlenght:
-                    #print(i)
-                    i = 1000
-                    intup = struct.unpack('<bbbbbbbb',arduino.read(inlenght))
-
-            
-            thr = int(intup[5])
-            print(intup)
-
+                   i = 1000
+                   CPacket = struct.unpack('<bbbbbbb',arduino.read(inlenght))
+                   joysticks.joystickAssignments(CPacket,vessel)
+                if arduino.in_waiting > 3*inlenght:
+                    arduino.flushInput
             
                 
 
