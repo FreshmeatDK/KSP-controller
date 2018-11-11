@@ -22,7 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Client.py" />
-    <Compile Include="joysticks.py">
+    <Compile Include="controls.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

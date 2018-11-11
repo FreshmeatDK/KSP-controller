@@ -5,15 +5,14 @@ import time
 import serial
 import struct
 
-import joysticks
+import controls
 
 conn = krpc.connect(name='Controller')
-vessel = conn.space_center.active_vessel
-refframe = vessel.orbit.body.reference_frame
-apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis')
-altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
+#vessel = conn.space_center.active_vessel
 
 arduino = serial.Serial('COM4', 28800)
+
+keys =["pitch","yaw","roll","tx","ty","tz","throttle","cbyte0","cbyte1","cbyte2","cbyte3","cbyte4"]
 
 def main_loop():
     global conn
@@ -22,7 +21,7 @@ def main_loop():
 
 
     i = 0
-    inlenght = 7
+    inlenght = 12
     connected = False
 
     try:
@@ -39,11 +38,14 @@ def main_loop():
           
                 if arduino.in_waiting !=inlenght:
                    i = i+1
-                   print(arduino.in_waiting)
+                   #print(arduino.in_waiting)
                 if arduino.in_waiting == inlenght:
                    i = 1000
-                   CPacket = struct.unpack('<bbbbbbb',arduino.read(inlenght))
-                   joysticks.joystickAssignments(CPacket,vessel)
+                   serialin = struct.unpack('<bbbbbbbBBBBB',arduino.read(inlenght))
+                   #print(serialin[0])
+                   Cpacket = dict(zip(keys,serialin))
+                   print(Cpacket["yaw"])
+                   controls.assignments(Cpacket,vessel)
                 if arduino.in_waiting > 3*inlenght:
                     arduino.flushInput
             
@@ -64,6 +66,10 @@ while True:
 
         try:
             vessel = conn.space_center.active_vessel
+            refframe = vessel.orbit.body.reference_frame
+            apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis')
+            altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
+
             print("Active vessel:"+vessel.name)
             main_loop()
         except krpc.error.RPCError:
