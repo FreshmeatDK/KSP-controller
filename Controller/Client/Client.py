@@ -14,12 +14,15 @@ arduino = serial.Serial('COM4', 28800)
 
 keys =["pitch","yaw","roll","tx","ty","tz","throttle","cbyte0","cbyte1","cbyte2","cbyte3","cbyte4"]
 
+
+
+
 def main_loop():
     global conn
     global vessel
     
-
-
+    CPacket = dict()
+    
     i = 0
     inlenght = 12
     connected = False
@@ -36,18 +39,23 @@ def main_loop():
 
             while i < 1000:
           
-                if arduino.in_waiting !=inlenght:
+                if arduino.in_waiting < 3:
                    i = i+1
                    #print(arduino.in_waiting)
-                if arduino.in_waiting == inlenght:
-                   i = 1000
-                   serialin = struct.unpack('<bbbbbbbBBBBB',arduino.read(inlenght))
-                   #print(serialin[0])
-                   Cpacket = dict(zip(keys,serialin))
-                   print(Cpacket["yaw"])
-                   controls.assignments(Cpacket,vessel)
-                if arduino.in_waiting > 3*inlenght:
-                    arduino.flushInput
+                if arduino.in_waiting > 2:
+                   check = arduino.read(1)
+                   #print(check[0])
+                   if check[0] == 85:
+                       check2 = arduino.read(1)
+                       if check2[0] == 85:
+                           if arduino.in_waiting == inlenght:
+                               serialin = arduino.read(inlenght)
+                               datain = struct.unpack('<bbbbbbbBBBBB',serialin)
+                               oldPacket = CPacket
+                               CPacket = dict(zip(keys,datain))
+                               controls.assignments(CPacket,vessel)
+                               i = 1000
+                
             
                 
 

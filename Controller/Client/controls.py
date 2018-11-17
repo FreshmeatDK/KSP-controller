@@ -9,25 +9,65 @@ def SASAssignement(cbyte,vessel):
     sasMode=((cbyte)& (0b00001111))
     
     if sasMode == 0b1011:
-        vessel.control.sas_mode = vessel.control.sas_mode.target
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.target
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - target')
+           pass
     elif sasMode == 0b1010:
-        vessel.control.sas_mode = vessel.control.sas_mode.radial
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.radial
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - radial')
+           pass
     elif sasMode == 0b1001:
-        vessel.control.sas_mode = vessel.control.sas_mode.normal
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.normal
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - normal')
+           pass
     elif sasMode == 0b1000:
-        vessel.control.sas_mode = vessel.control.sas_mode.prograde
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.prograde
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - normal')
+           pass
     elif sasMode == 0b0111:
-        vessel.control.sas_mode = vessel.control.sas_mode.stability_assist
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.stability_assist
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - stability assist')
+           pass
     elif sasMode == 0b0110:
-        vessel.control.sas_mode = vessel.control.sas_mode.maneuver
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.maneuver
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - Maneuver')
+           pass
     elif sasMode == 0b1110:
-        vessel.control.sas_mode = vessel.control.sas_mode.retrograde
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.retrograde
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - Retrograde')
+           pass
     elif sasMode == 0b1101:
-        vessel.control.sas_mode = vessel.control.sas_mode.anti_normal
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.anti_normal
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - Anti normal')
+           pass
     elif sasMode == 0b1100:
-        vessel.control.sas_mode = vessel.control.sas_mode.anti_radial
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.anti_radial
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - Anti radial')
+           pass
     elif sasMode == 0b1110:
-        vessel.control.sas_mode = vessel.control.sas_mode.anti_target
+        try:
+           vessel.control.sas_mode = vessel.control.sas_mode.anti_target
+        except krpc.client.RPCError:
+           print('Could not set SAS Mode - Anti target')
+           pass
     else: 
         print("SAS malformed parameter")
 
@@ -39,6 +79,4 @@ def toggles(values,vessel):
 
 def assignments(values,vessel):
     joystickAssignments(values,vessel)
-    print(bin(values["cbyte1"]))
-    
     toggles(values,vessel)
