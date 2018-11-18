@@ -53,7 +53,12 @@ def main_loop():
                                datain = struct.unpack('<bbbbbbbBBBBB',serialin)
                                oldPacket = CPacket
                                CPacket = dict(zip(keys,datain))
-                               controls.assignments(CPacket,vessel)
+                               try:
+                                  dummy = oldPacket["pitch"]
+                               except KeyError:
+                                   oldPacket = CPacket
+                                   print("first")
+                               controls.assignments(CPacket, oldPacket,vessel)
                                i = 1000
                 
             
