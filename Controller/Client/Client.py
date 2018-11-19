@@ -8,7 +8,6 @@ import struct
 import controls
 
 conn = krpc.connect(name='Controller')
-#vessel = conn.space_center.active_vessel
 
 arduino = serial.Serial('COM4', 28800)
 
@@ -18,29 +17,28 @@ keys =["pitch","yaw","roll","tx","ty","tz","throttle","cbyte0","cbyte1","cbyte2"
 
 
 def main_loop():
-    global conn
-    global vessel
     
     CPacket = dict()
     
-    i = 0
+    count = 0
+
     inlenght = 12
     connected = False
 
     try:
         while vessel == conn.space_center.active_vessel:
 
-            apv = float(apoapsis())
-            altv= float(altitude())
-          
-            arduino.write(struct.pack('<ff', apv, altv))
+
+
 
             i = 0
-
+            j = 0
             while i < 1000:
-          
-                if arduino.in_waiting < 3:
-                   i = i+1
+
+                i = i+1
+                
+                #if arduino.in_waiting < 3:
+                   
                    #print(arduino.in_waiting)
                 if arduino.in_waiting > 2:
                    check = arduino.read(1)
@@ -53,11 +51,24 @@ def main_loop():
                                datain = struct.unpack('<bbbbbbbBBBBB',serialin)
                                oldPacket = CPacket
                                CPacket = dict(zip(keys,datain))
+                               print(i)
                                try:
                                   dummy = oldPacket["pitch"]
                                except KeyError:
                                    oldPacket = CPacket
                                    print("first")
+                               apv = float(apoapsis())
+                               t_apv = int(t_ap())
+                               pev = float(periapsis())
+                               t_pev = int(t_pe())
+                               altv= float(altitude())
+                               altsv = float(surf_alt())
+                               v_surfv = float(v_surf())
+                               v_orbv = float(v_orb())
+                               count = count +1
+
+                               buffer = struct.pack('<BBIffIIffff', 85, 85, count, apv, pev, t_apv, t_pev, altv, altsv, v_orbv, v_surfv)
+                                arduino.write(buffer)
                                controls.assignments(CPacket, oldPacket,vessel)
                                i = 1000
                 
@@ -79,9 +90,21 @@ while True:
 
         try:
             vessel = conn.space_center.active_vessel
-            refframe = vessel.orbit.body.reference_frame
-            apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis')
+            orb_frame = vessel.orbit.body.non_rotating_reference_frame
+            sur_frame = vessel.orbit.body.reference_frame
+            
+            #streams:  orbital
+            apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis_altitude')
+            t_ap = conn.add_stream(getattr, vessel.orbit, 'time_to_apoapsis')
+            periapsis = conn.add_stream(getattr, vessel.orbit, 'periapsis_altitude')
+            t_pe = conn.add_stream(getattr, vessel.orbit, 'time_to_periapsis')
+
+            #streams: flight
             altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
+            surf_alt = conn.add_stream(getattr, vessel.flight(), 'surface_altitude')
+            v_surf = conn.add_stream(getattr, vessel.flight(sur_frame), 'speed')
+            v_orb = conn.add_stream(getattr, vessel.flight(orb_frame), 'speed')
+
 
             print("Active vessel:"+vessel.name)
             main_loop()
