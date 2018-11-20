@@ -37,9 +37,10 @@ def main_loop():
 
                 i = i+1
                 
-                #if arduino.in_waiting < 3:
+                if arduino.in_waiting < 3:
                    
-                   #print(arduino.in_waiting)
+                   print(arduino.in_waiting)
+
                 if arduino.in_waiting > 2:
                    check = arduino.read(1)
                    #print(check[0])
@@ -68,14 +69,10 @@ def main_loop():
                                count = count +1
 
                                buffer = struct.pack('<BBIffIIffff', 85, 85, count, apv, pev, t_apv, t_pev, altv, altsv, v_orbv, v_surfv)
-                                arduino.write(buffer)
+                               arduino.write(buffer)
                                controls.assignments(CPacket, oldPacket,vessel)
                                i = 1000
-                
-            
-                
-
-
+ 
     except krpc.error.RPCError:
         print("Error")
     else:
