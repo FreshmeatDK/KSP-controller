@@ -34,20 +34,21 @@ def main_loop():
             i = 0
             j = 0
             while i < 1000:
-
+                
                 i = i+1
                 
-                if arduino.in_waiting < 3:
+                #if arduino.in_waiting < 3:
                    
-                   print(arduino.in_waiting)
+                   #print(arduino.in_waiting)
 
                 if arduino.in_waiting > 2:
+                   print(arduino.in_waiting)
                    check = arduino.read(1)
                    #print(check[0])
                    if check[0] == 85:
-                       check2 = arduino.read(1)
-                       if check2[0] == 85:
-                           if arduino.in_waiting == inlenght:
+                       #check2 = arduino.read(1)
+                       if check[0] == 85:
+                           if arduino.in_waiting <= inlenght:
                                serialin = arduino.read(inlenght)
                                datain = struct.unpack('<bbbbbbbBBBBB',serialin)
                                oldPacket = CPacket
@@ -68,10 +69,12 @@ def main_loop():
                                v_orbv = float(v_orb())
                                count = count +1
 
-                               buffer = struct.pack('<BBIffIIffff', 85, 85, count, apv, pev, t_apv, t_pev, altv, altsv, v_orbv, v_surfv)
+                               buffer = struct.pack('<BIffIIffff', 85, count, apv, pev, t_apv, t_pev, altv, altsv, v_orbv, v_surfv)
                                arduino.write(buffer)
                                controls.assignments(CPacket, oldPacket,vessel)
                                i = 1000
+                           else:
+                                arduino.flushInput
  
     except krpc.error.RPCError:
         print("Error")
