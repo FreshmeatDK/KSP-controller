@@ -76,8 +76,13 @@ def SASAssignement(cbyte, oldbyte,vessel):
 def toggles(values, oldvals,vessel):
     
     vessel.control.sas = bool((values["cbyte1"] & 0b01000000))
+    if values["pitch"] != 0 or values["yaw"] != 0 or values["roll"] !=0:
+        vessel.control.sas = False
+
     if bool((values["cbyte1"] & 0b01000000)):
         SASAssignement(values["cbyte1"], oldvals["cbyte1"],vessel)
+    
+
     if (bool((values["cbyte4"] & 0b00000100)) == True and bool((oldvals["cbyte4"] & 0b00000100)) == False):
         vessel.control.activate_next_stage()
 
