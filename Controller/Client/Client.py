@@ -5,98 +5,81 @@ import time
 import serial
 import struct
 
-import controls
-
 conn = krpc.connect(name='Controller')
 
-arduino = serial.Serial('COM4', 28800)
-
-keys =["pitch","yaw","roll","tx","ty","tz","throttle","cbyte0","cbyte1","cbyte2","cbyte3","cbyte4"]
-
-
-
+arduino = serial.Serial('COM9', 9600)
 
 def main_loop():
 
-
-
-    
-    CPacket = dict()
-    
-    count = 0
-
-    inlenght = 12
     connected = False
 
     try:
-        while vessel == conn.space_center.active_vessel:
-            orb_frame = vessel.orbit.body.non_rotating_reference_frame
-            sur_frame = vessel.orbit.body.reference_frame
-            #streams:  orbital
-            apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis_altitude')
-            t_ap = conn.add_stream(getattr, vessel.orbit, 'time_to_apoapsis')
-            periapsis = conn.add_stream(getattr, vessel.orbit, 'periapsis_altitude')
-            t_pe = conn.add_stream(getattr, vessel.orbit, 'time_to_periapsis')
+      while vessel == conn.space_center.active_vessel:
+         if arduino.in_waiting > 0:
+            inData=struct.unpack('<B',arduino.read())
+            ctrl=inData[0]
+            #print(bin(ctrl))
+            
+            solar=(ctrl & 0b00001000)
+            if solar:
+               for Solar_Panel in vessel.parts.solar_panels:
+                   Solar_Panel.deployed=True
+            else:
+               for Solar_Panel in vessel.parts.solar_panels:
+                   Solar_Panel.deployed=False
+            
+            radiator =(ctrl&0b00000100)
+            if radiator:
+                for Radiator in vessel.parts.radiators:
+                    Radiator.deployed=True
+            else:
+                for Radiator in vessel.parts.radiators:
+                    Radiator.deployed=False
 
-            #streams: flight
-            altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
-            surf_alt = conn.add_stream(getattr, vessel.flight(), 'surface_altitude')
-            v_surf = conn.add_stream(getattr, vessel.flight(sur_frame), 'speed')
-            v_orb = conn.add_stream(getattr, vessel.flight(orb_frame), 'speed')
+            cbay =(ctrl&0b00000010)
+            if cbay:
+                for Bay in vessel.parts.cargo_bays:
+                    Bay.open=True
+            else:
+                for Bay in vessel.parts.cargo_bays:
+                    Bay.open=False 
 
+            engine =(ctrl & 0b00000001)
+            if engine:
+                for Engine in vessel.parts.engines:
+                    try:
+                        Engine.mode='AirBreathing'
+                    except:
+                        pass
+                    try:
+                        Engine.mode='Wet'
+                    except:
+                        pass
 
+            else:
+                for Engine in vessel.parts.engines:
+                    try:
+                        Engine.mode='ClosedCycle'
+                    except:
+                        pass
+                    try:
+                        Engine.mode='Dry'
+                    except:
+                        pass
+            
+            camera = (ctrl&0b11100000)>>5
+            print(camera)
+            if camera == 1:
+                try:
+                    vessel.camera.mode=CameraMode.automatic
+                except:
+                    pass
+            if camera == 2:
+                try:
+                    vessel.camera.mode=CameraMode.map
+                except:
+                    pass
 
-            i = 0
-            j = 0
-            while i < 1000:
-                
-                i = i+1
- 
-                if arduino.in_waiting > inlenght:
-                   print(arduino.in_waiting)
-                   check = arduino.read(1)
-             
-                   if check[0] == 85:
-                        #if arduino.in_waiting == inlenght:
-                            serialin = arduino.read(inlenght)
-                            datain = struct.unpack('<bbbbbbbBBBBB',serialin)
-                            oldPacket = CPacket
-                            CPacket = dict(zip(keys,datain))
-                            #print(i)
-                            try:
-                                dummy = oldPacket["pitch"]
-                                if CPacket["pitch"] != 0 or CPacket["yaw"] != 0 or CPacket["roll"] !=0: #if active steering
-                                    #in oldpacket, so when steering is left to SAS, the new packet will see the overridden values
-                                    oldPacket["cbyte1"] = oldPacket["cbyte1"] & 0b10110000 #clear SAS bit and SAS mode nibble
-                                    oldPacket["cbyte1"] = oldPacket["cbyte1"] | 0b00000111 #set SAS mode nibble to stbility assist
-                                    print(oldPacket["cbyte1"], " ", CPacket["cbyte1"])
-                                    
-                            except KeyError:
-                                oldPacket = CPacket
-                                print("first")
-                            apv = float(apoapsis())
-                            if t_ap() < 2147483647:
-                                t_apv = int(t_ap())
-                            else:
-                                t_apv = 0
-                            pev = float(periapsis())
-                            if t_pe() < 2147483647:
-                                t_pev = int(t_pe())
-                            else:
-                                t_pev = 0
-                            altv= float(altitude())
-                            altsv = float(surf_alt())
-                            v_surfv = float(v_surf())
-                            v_orbv = float(v_orb())
-                            count = count +1
-
-                            buffer = struct.pack('<BIffIIffff', 85, count, apv, pev, t_apv, t_pev, altv, altsv, v_orbv, v_surfv)
-                            arduino.write(buffer)
-                            controls.assignments(CPacket, oldPacket,vessel)
-                          
-                if arduino.in_waiting > 3*inlenght:
-                   arduino.flushInput
- 
     except krpc.error.RPCError:
         print("Error")
     else:
@@ -111,10 +94,6 @@ while True:
 
         try:
             vessel = conn.space_center.active_vessel
-
-            
-            
-
 
             print("Active vessel:"+vessel.name)
             main_loop()
