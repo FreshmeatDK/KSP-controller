@@ -18,7 +18,7 @@ def main_loop():
          if arduino.in_waiting > 0:
             inData=struct.unpack('<B',arduino.read())
             ctrl=inData[0]
-            #print(bin(ctrl))
+            print(bin(ctrl))
             
             solar=(ctrl & 0b00001000)
             if solar:
@@ -68,17 +68,57 @@ def main_loop():
                         pass
             
             camera = (ctrl&0b11100000)>>5
-            print(camera)
+            #print(camera)
             if camera == 1:
-                try:
-                    vessel.camera.mode=CameraMode.automatic
-                except:
-                    pass
+                if cam.mode != cam.mode.automatic:
+                    try:
+                        cam.mode=cam.mode.automatic
+                    
+                    except:
+                        pass
             if camera == 2:
-                try:
-                    vessel.camera.mode=CameraMode.map
-                except:
-                    pass
+                if cam.mode != cam.mode.map:
+                    try:
+                        cam.mode=cam.mode.map
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+            if camera == 3:
+                if cam.mode != cam.mode.iva:
+                    try:
+                        cam.mode=cam.mode.iva
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+            if camera == 4:
+                if cam.mode != cam.mode.free:
+                    try:
+                        cam.mode=cam.mode.free
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+            if camera == 5:
+                if cam.mode != cam.mode.chase:
+                    try:
+                        cam.mode=cam.mode.chase
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+            if camera == 6:
+                if cam.mode != cam.mode.locked:
+                    try:
+                        cam.mode=cam.mode.locked
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+            if camera == 7:
+                if cam.mode != cam.mode.orbital:
+                    try:
+                        cam.mode=cam.mode.orbital
+                    
+                    except:
+                        cam.mode=cam.mode.automatic
+
 
     except krpc.error.RPCError:
         print("Error")
@@ -94,6 +134,7 @@ while True:
 
         try:
             vessel = conn.space_center.active_vessel
+            cam = conn.space_center.camera
 
             print("Active vessel:"+vessel.name)
             main_loop()
