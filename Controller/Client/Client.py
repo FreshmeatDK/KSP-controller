@@ -28,7 +28,7 @@ def main_loop():
                for Solar_Panel in vessel.parts.solar_panels:
                    Solar_Panel.deployed=False
             
-            radiator =(ctrl&0b00000100)
+            radiator =(ctrl & 0b00000100)
             if radiator:
                 for Radiator in vessel.parts.radiators:
                     Radiator.deployed=True
@@ -36,13 +36,21 @@ def main_loop():
                 for Radiator in vessel.parts.radiators:
                     Radiator.deployed=False
 
-            cbay =(ctrl&0b00000010)
+            cbay =(ctrl & 0b00000010)
             if cbay:
                 for Bay in vessel.parts.cargo_bays:
                     Bay.open=True
             else:
                 for Bay in vessel.parts.cargo_bays:
                     Bay.open=False 
+
+            rwheels=(ctrl & 0b00010000)
+            if rwheels:
+                for ReactionWheel in vessel.part.reaction_wheels:
+                    ReactionWheel.active = True
+            else:
+                for ReactionWheel in vessel.part.reaction_wheels:
+                    ReactionWheel.active = False
 
             engine =(ctrl & 0b00000001)
             if engine:
