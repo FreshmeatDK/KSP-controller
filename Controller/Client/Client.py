@@ -46,10 +46,10 @@ def main_loop():
 
             rwheels=(ctrl & 0b00010000)
             if rwheels:
-                for ReactionWheel in vessel.part.reaction_wheels:
+                for ReactionWheel in vessel.parts.reaction_wheels:
                     ReactionWheel.active = True
             else:
-                for ReactionWheel in vessel.part.reaction_wheels:
+                for ReactionWheel in vessel.parts.reaction_wheels:
                     ReactionWheel.active = False
 
             engine =(ctrl & 0b00000001)
