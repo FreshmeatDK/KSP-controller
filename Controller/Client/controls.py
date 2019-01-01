@@ -1,91 +1,154 @@
 import krpc
 
-def joystickAssignments(values,vessel):
-    vessel.control.pitch = values["pitch"]/100
-    vessel.control.yaw = values["yaw"]/100
-    vessel.control.roll=values["roll"]/100
-    vessel.control.throttle=values["throttle"]/100
 
+def actions(ctrl, oldCtrl, vessel, partlist):
+     if ((ctrl[0] & 0b00001000) != (oldCtrl[0] & 0b00001000)):
+        solar=(ctrl[0] & 0b00001000)
+        if solar:
+            for part in partlist:
+                if part.solar_panel != None:
+                    Panel = part.solar_panel
+                    try:
+                        Panel.deployed = True
+                    except:
+                        pass
+        else:
+            for part in partlist:
+                if part.solar_panel != None:
+                    Panel = part.solar_panel
+                    try:
+                        Panel.deployed = False
+                    except:
+                        pass
 
-def SASAssignement(cbyte, oldbyte,vessel):
-    sasMode=((cbyte)& (0b00001111))
-    oldSasMode =((oldbyte)& (0b00001111))
-    
-    if sasMode == 0b1011 and oldSasMode != 0b1011:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.target
-        except RuntimeError:
-           print('Could not set SAS Mode - target')
-           pass
-    elif sasMode == 0b1010 and oldSasMode !=0b1010:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.radial
-        except RuntimeError:
-           print('Could not set SAS Mode - radial')
-           pass
-    elif sasMode == 0b1001 and oldSasMode !=0b1001:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.normal
-        except RuntimeError:
-           print('Could not set SAS Mode - normal')
-           pass
-    elif sasMode == 0b1000 and oldSasMode !=0b1000:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.prograde
-        except RuntimeError:
-           print('Could not set SAS Mode - Prograde')
-           pass
-    elif sasMode == 0b0111 and oldSasMode !=0b0111:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.stability_assist
-        except RuntimeError:
-           print('Could not set SAS Mode - stability assist')
-           pass
-    elif sasMode == 0b0110 and oldSasMode !=0b0110:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.maneuver
-        except RuntimeError:
-           print('Could not set SAS Mode - Maneuver')
-           pass
-    elif sasMode == 0b1110 and oldSasMode !=0b1110:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.retrograde
-        except RuntimeError:
-           print('Could not set SAS Mode - Retrograde')
-           pass
-    elif sasMode == 0b1101 and oldSasMode !=0b1101:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.anti_normal
-        except RuntimeError:
-           print('Could not set SAS Mode - Anti normal')
-           pass
-    elif sasMode == 0b1100 and oldSasMode !=0b1100:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.anti_radial
-        except RuntimeError:
-           print('Could not set SAS Mode - Anti radial')
-           pass
-    elif sasMode == 0b1110 and oldSasMode !=0b1110:
-        try:
-           vessel.control.sas_mode = vessel.control.sas_mode.anti_target
-        except RuntimeError:
-           print('Could not set SAS Mode - Anti target')
-           pass
-    
+            
+     if ((ctrl[0] & 0b00000100) !=(oldCtrl[0] & 0b00000100)):
+        radiator =(ctrl[0] & 0b00000100)
+        if radiator:
+             for part in partlist:
+                if part.radiator != None:
+                    Radiator = part.radiator
+                    try:
+                        Radiator.deployed = True
+                    except:
+                        pass
+        else:
+            for part in partlist:
+                if part.radiator != None:
+                    Radiator = part.radiator
+                    try:
+                        Radiator.deployed = False
+                    except:
+                        pass
 
-def toggles(values, oldvals,vessel):
-    
-    vessel.control.sas = bool((values["cbyte1"] & 0b01000000))
-    if values["pitch"] != 0 or values["yaw"] != 0 or values["roll"] !=0:
-        vessel.control.sas = False
+     if ((ctrl[0] & 0b00000010) != (oldCtrl[0] & 0b00000010)):
+        cbay =(ctrl[0] & 0b00000010)
 
-    if bool((values["cbyte1"] & 0b01000000)):
-        SASAssignement(values["cbyte1"], oldvals["cbyte1"],vessel)
-    
+        if cbay:
+            for part in partlist:
+                if part.cargo_bay != None:
+                    Bay = part.cargo_bay
+                    try:
+                        Bay.open = True
+                    except:
+                        pass
+        else:
+            for part in partlist:
+                if part.cargo_bay != None:
+                    Bay = part.cargo_bay
+                    try:
+                        Bay.open = False
+                    except:
+                        pass
 
-    if (bool((values["cbyte4"] & 0b00000100)) == True and bool((oldvals["cbyte4"] & 0b00000100)) == False):
-        vessel.control.activate_next_stage()
+     if ((ctrl[0] & 0b00010000) != (oldCtrl[0] & 0b00010000)):
+        rwheels=(ctrl[0] & 0b00010000)
+        if rwheels:
+            for ReactionWheel in vessel.parts.reaction_wheels:
+                ReactionWheel.active = True
+        else:
+            for ReactionWheel in vessel.parts.reaction_wheels:
+                ReactionWheel.active = False
 
-def assignments(CPvals, oldCPvals,vessel):
-    joystickAssignments(CPvals,vessel)
-    toggles(CPvals, oldCPvals,vessel)
+     if ((ctrl[0] & 0b00000001) != (oldCtrl[0] & 0b00000001)):
+         state = bool((ctrl[0] & 0b00000001))
+         batCapacity = vessel.resources.max('ElectricCharge')
+         for respart in vessel.parts.all:
+            for bat in respart.resources.with_resource('ElectricCharge'):
+                if ((bat.max*20 < batCapacity) or (bat.amount < 20)) and bat.amount < 1001:
+                    bat.enabled = not(bool(ctrl[0] & 0b00000001))
+
+     if ((ctrl[1] & 0b00000001) !=(oldCtrl[1] & 0b00000001)):
+        engine =(ctrl[1] & 0b00000001)
+        if engine:
+            for Engine in vessel.parts.engines:
+                try:
+                    Engine.mode='AirBreathing'
+                except:
+                    pass
+                try:
+                    Engine.mode='Wet'
+                except:
+                    pass
+
+        else:
+            for Engine in vessel.parts.engines:
+                try:
+                    Engine.mode='ClosedCycle'
+                except:
+                    pass
+                try:
+                    Engine.mode='Dry'
+                except:
+                    pass
+
+def camcontrol(camera, cam):
+     if camera == 1:
+        if cam.mode != cam.mode.automatic:
+            try:
+                cam.mode=cam.mode.automatic
+                    
+            except:
+                pass
+     elif camera == 2:
+        if cam.mode != cam.mode.map:
+            try:
+                cam.mode=cam.mode.map
+                    
+            except:
+                cam.mode=cam.mode.automatic
+     elif camera == 3:
+            if cam.mode != cam.mode.iva:
+                try:
+                    cam.mode=cam.mode.iva
+                    
+                except:
+                    cam.mode=cam.mode.automatic
+     elif camera == 4:
+        if cam.mode != cam.mode.free:
+            try:
+                cam.mode=cam.mode.free
+                    
+            except:
+                cam.mode=cam.mode.automatic
+     elif camera == 5:
+        if cam.mode != cam.mode.chase:
+            try:
+                cam.mode=cam.mode.chase
+                    
+            except:
+                cam.mode=cam.mode.automatic
+     elif camera == 6:
+        if cam.mode != cam.mode.locked:
+            try:
+                cam.mode=cam.mode.locked
+                    
+            except:
+                cam.mode=cam.mode.automatic
+     elif camera == 7:
+        if cam.mode != cam.mode.orbital:
+            try:
+                cam.mode=cam.mode.orbital
+                    
+            except:
+                cam.mode=cam.mode.automatic

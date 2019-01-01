@@ -1,13 +1,27 @@
 # -*- coding: <utf_8> -*-
 
 import krpc
+import controls
 import time
 import serial
 import struct
+from controls import actions, camcontrol
 
 conn = krpc.connect(name='Controller')
 
 arduino = serial.Serial('COM14', 9600)
+
+def listMainParts(vessel):
+    root = vessel.parts.root
+    list = []
+    stack = [root]
+    while stack:
+        part = stack.pop()
+        list.append(part)
+        for child in part.children:
+            if (child.name != 'dockingPort2') and (child.name != 'ConstructionPort1'):
+                stack.append(child)
+    return list
 
 def main_loop():
     ctrl = [0,0]
@@ -22,29 +36,25 @@ def main_loop():
          # 0 = success, 1 = unspec/timeout, 2 = overflow
          if arduino.in_waiting > 0:
             inData=struct.unpack('<B',arduino.read())
-            print(bin(inData[0]))
             ctrlByteNum = 0
             for i in range(0,1):
                 oldCtrl[i] = ctrl[i]
 
             if inData[0] == 0b10101010:
                 readOp = True
-
                 waitloop = 1
-                
                 while readOp:
-                    print('ctrlBN: ', ctrlByteNum)
                     waitloop += 1
                     if waitloop > 1000:
                         readOp = False
                     if arduino.in_waiting > 0:
                         inData=struct.unpack('<B',arduino.read())
-                        print(bin(inData[0]))
                     if inData[0] == 0b11001100:
                         readOp = False
-                        if ctrlByteNum == 1:
+                        if (ctrlByteNum == 2 and errorcode == 1):
                             errorcode = 0
-                    if inData[0] == 0b00001111:
+
+                    elif inData[0] == 0b00001111:
                         inData=struct.unpack('<B',arduino.read())
                         ctrl[ctrlByteNum] = inData[0]
                         ctrlByteNum += 1
@@ -52,123 +62,21 @@ def main_loop():
                             ctrlByteNum = 1
                             errorcode = 2
                     else: 
-                        ctrl[ctrlByteNum] = inData[0]
-                        ctrlByteNum += 1
                         if ctrlByteNum > 1:
                             ctrlByteNum = 1
                             errorcode = 2
-            print('returnvale: ', errorcode)
+                        ctrl[ctrlByteNum] = inData[0]
+                        ctrlByteNum += 1
 
-            if errorcode == 0:
 
-                print('success')
-            
-                solar=(ctrl[0] & 0b00001000)
-                if solar:
-                    for Solar_Panel in vessel.parts.solar_panels:
-                        Solar_Panel.deployed=True
-                else:
-                    for Solar_Panel in vessel.parts.solar_panels:
-                        Solar_Panel.deployed=False
-            
-                radiator =(ctrl[0] & 0b00000100)
-                if radiator:
-                    for Radiator in vessel.parts.radiators:
-                        Radiator.deployed=True
-                else:
-                    for Radiator in vessel.parts.radiators:
-                        Radiator.deployed=False
-
-                cbay =(ctrl[0] & 0b00000010)
-                if cbay:
-                    for Bay in vessel.parts.cargo_bays:
-                        Bay.open=True
-                else:
-                    for Bay in vessel.parts.cargo_bays:
-                        Bay.open=False 
-
-                rwheels=(ctrl[0] & 0b00010000)
-                if rwheels:
-                   for ReactionWheel in vessel.parts.reaction_wheels:
-                        ReactionWheel.active = True
-                # else:
-               #     for ReactionWheel in vessel.parts.reaction_wheels:
-               #         ReactionWheel.active = False
-
-                engine =(ctrl[0] & 0b00000001)
-                if engine:
-                    for Engine in vessel.parts.engines:
-                        try:
-                            Engine.mode='AirBreathing'
-                        except:
-                            pass
-                        try:
-                            Engine.mode='Wet'
-                        except:
-                            pass
-
-                else:
-                    for Engine in vessel.parts.engines:
-                        try:
-                            Engine.mode='ClosedCycle'
-                        except:
-                            pass
-                        try:
-                            Engine.mode='Dry'
-                        except:
-                            pass
-            
-                camera = (ctrl&0b11100000)>>5
-                #print(camera)
-                if camera == 1:
-                    if cam.mode != cam.mode.automatic:
-                        try:
-                            cam.mode=cam.mode.automatic
-                    
-                        except:
-                            pass
-                if camera == 2:
-                    if cam.mode != cam.mode.map:
-                        try:
-                            cam.mode=cam.mode.map
-                    
-                        except:
-                            cam.mode=cam.mode.automatic
-                if camera == 3:
-                        if cam.mode != cam.mode.iva:
-                            try:
-                                cam.mode=cam.mode.iva
-                    
-                            except:
-                                cam.mode=cam.mode.automatic
-                if camera == 4:
-                    if cam.mode != cam.mode.free:
-                        try:
-                            cam.mode=cam.mode.free
-                    
-                        except:
-                            cam.mode=cam.mode.automatic
-                if camera == 5:
-                    if cam.mode != cam.mode.chase:
-                        try:
-                            cam.mode=cam.mode.chase
-                    
-                        except:
-                            cam.mode=cam.mode.automatic
-                if camera == 6:
-                    if cam.mode != cam.mode.locked:
-                        try:
-                            cam.mode=cam.mode.locked
-                    
-                        except:
-                            cam.mode=cam.mode.automatic
-                if camera == 7:
-                    if cam.mode != cam.mode.orbital:
-                        try:
-                            cam.mode=cam.mode.orbital
-                    
-                        except:
-                            cam.mode=cam.mode.automatic
+            if errorcode == 0: # we have success, run commands
+                if oldCtrl != ctrl: # if anything has changed, execute changes
+                    mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
+                    actions(ctrl,oldCtrl,vessel, mainParts)
+                    camera = (ctrl[0]&0b11100000)>>5
+                    camcontrol(camera, cam)
+                
+               
 
 
     except krpc.error.RPCError:
