@@ -9,7 +9,7 @@ from controls import actions, camcontrol
 
 conn = krpc.connect(name='Controller')
 
-arduino = serial.Serial('COM14', 9600)
+arduino = serial.Serial('COM14', 38400)
 
 def listMainParts(vessel):
     root = vessel.parts.root
@@ -29,15 +29,18 @@ def main_loop():
     connected = False
     ctrl[0] = 0
     ctrl[1] = 0
+    mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
     
     try:
       while vessel == conn.space_center.active_vessel:
-         errorcode = 1
-         # 0 = success, 1 = unspec/timeout, 2 = overflow
-         if arduino.in_waiting > 0:
+
+          errorcode = 1
+          # 0 = success, 1 = unspec/timeout, 2 = overflow
+          if arduino.in_waiting > 0:
             inData=struct.unpack('<B',arduino.read())
             ctrlByteNum = 0
-            for i in range(0,1):
+ 
+            for i in range(2):
                 oldCtrl[i] = ctrl[i]
 
             if inData[0] == 0b10101010:
@@ -70,8 +73,8 @@ def main_loop():
 
 
             if errorcode == 0: # we have success, run commands
-                if oldCtrl != ctrl: # if anything has changed, execute changes
-                    mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
+
+                if (ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]):
                     actions(ctrl,oldCtrl,vessel, mainParts)
                     camera = (ctrl[0]&0b11100000)>>5
                     camcontrol(camera, cam)
