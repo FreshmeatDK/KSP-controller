@@ -34,11 +34,15 @@ def main_loop():
     try:
       while vessel == conn.space_center.active_vessel:
 
+         
           errorcode = 1
           # 0 = success, 1 = unspec/timeout, 2 = overflow
           if arduino.in_waiting > 0:
             inData=struct.unpack('<B',arduino.read())
             ctrlByteNum = 0
+            if arduino.in_waiting > 80:
+                arduino.write(0b10101010) #send wait to arduino
+                print('overflow')
  
             for i in range(2):
                 oldCtrl[i] = ctrl[i]
