@@ -9,7 +9,7 @@ from controls import actions, camcontrol
 
 conn = krpc.connect(name='Controller')
 
-arduino = serial.Serial('COM14', 38400)
+arduino = serial.Serial('COM16', 38400)
 
 def listMainParts(vessel):
     root = vessel.parts.root
@@ -42,7 +42,7 @@ def main_loop():
             ctrlByteNum = 0
             if arduino.in_waiting > 80:
                 arduino.write(0b10101010) #send wait to arduino
-                print('overflow')
+                print("overflow: "+arduino.in_waiting)
  
             for i in range(2):
                 oldCtrl[i] = ctrl[i]
