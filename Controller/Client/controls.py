@@ -112,7 +112,7 @@ def actions(ctrl, oldCtrl, vessel, partlist):
 
     if ((ctrl[1] & 0b00000100) !=(oldCtrl[1] & 0b00000100)): # Run repeatable science experiments
         DoneExperimentList = []
-        for Experiment in vessel.part.experiments:
+        for Experiment in vessel.parts.experiments:
             if (Experiment.has_data == False) and (Experiment.rerunnable == True) and (Experiment.available == True) and (Experiment.inoperable == False):
                 ExpPart = Experiment.part
                 if ExpPart.name not in DoneExperimentList: # Make sure only one of each type is run
@@ -124,7 +124,7 @@ def actions(ctrl, oldCtrl, vessel, partlist):
      
     if ((ctrl[1] & 0b00001000) !=(oldCtrl[1] & 0b00001000)): # Run all science experiments
         DoneExperimentList = []
-        for Experiment in vessel.part.experiments:
+        for Experiment in vessel.parts.experiments:
             if (Experiment.has_data == False) and (Experiment.available == True) and (Experiment.inoperable == False):
                 ExpPart = Experiment.part
                 if ExpPart.name not in DoneExperimentList:

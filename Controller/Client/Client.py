@@ -42,12 +42,17 @@ def main_loop():
             ctrlByteNum = 0
             if arduino.in_waiting > 80:
                 arduino.write(0b10101010) #send wait to arduino
-                print("overflow: "+arduino.in_waiting)
+                print("overflow: ",arduino.in_waiting)
+                conn.ui.message("Overflow", position = conn.ui.MessagePosition.top_left)
+                arduino.flushInput()
+            else:
+                arduino.write(0b01010101)
  
             for i in range(2):
                 oldCtrl[i] = ctrl[i]
 
             if inData[0] == 0b10101010:
+          
                 readOp = True
                 waitloop = 1
                 while readOp:
