@@ -30,11 +30,12 @@ def main_loop():
     ctrl[0] = 0
     ctrl[1] = 0
     mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
-    
+    updateTime = time.time()
+
     try:
       while vessel == conn.space_center.active_vessel:
 
-         
+          thisTime = time.time()
           errorcode = 1
           # 0 = success, 1 = unspec/timeout, 2 = overflow
           if arduino.in_waiting > 0:
@@ -45,8 +46,10 @@ def main_loop():
                 print("overflow: ",arduino.in_waiting)
                 conn.ui.message("Overflow", position = conn.ui.MessagePosition.top_left)
                 arduino.flushInput()
-            else:
-                arduino.write(0b01010101)
+            elif (thisTime - updateTime) > 0.1:
+                  updateTime = time.time()
+                  #conn.ui.message("Ack", position = conn.ui.MessagePosition.top_left)
+                  arduino.write(0b01010101)
  
             for i in range(2):
                 oldCtrl[i] = ctrl[i]
@@ -87,8 +90,11 @@ def main_loop():
                     actions(ctrl,oldCtrl,vessel, mainParts)
                     camera = (ctrl[0]&0b11100000)>>5
                     camcontrol(camera, cam)
-                
-               
+
+          elif (thisTime - updateTime) > 1:
+                  updateTime = time.time()
+                  conn.ui.message("Return flow", position = conn.ui.MessagePosition.top_left)
+                  arduino.write(0b01010101)
 
 
     except krpc.error.RPCError:
