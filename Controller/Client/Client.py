@@ -30,7 +30,10 @@ def main_loop():
     ctrl[0] = 0
     ctrl[1] = 0
     mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
+    time.sleep(1)
     updateTime = time.time()
+    initTime = time.time()
+    print('init')
 
     try:
       while vessel == conn.space_center.active_vessel:
@@ -86,7 +89,7 @@ def main_loop():
 
             if errorcode == 0: # we have success, run commands
 
-                if (ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]):
+                if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and thisTime-initTime > 1 ):
                     actions(ctrl,oldCtrl,vessel, mainParts)
                     camera = (ctrl[0]&0b11100000)>>5
                     camcontrol(camera, cam)
