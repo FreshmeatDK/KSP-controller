@@ -106,11 +106,11 @@ def actions(ctrl, oldCtrl, vessel, partlist):
                 except:
                     pass
 
-    if ((ctrl[1] & 0b00000010) !=(oldCtrl[1] & 0b00000010)): # Deploy parachutes
+    if ((ctrl[1] & 0b00000010) !=(oldCtrl[1] & 0b00000010) and (ctrl[1] & 0b00000010)): # Deploy parachutes
         for Parachute in vessel.parts.parachutes:
             Parachute.deploy()
 
-    if ((ctrl[1] & 0b00000100) !=(oldCtrl[1] & 0b00000100)): # Run repeatable science experiments
+    if ((ctrl[1] & 0b00000100) !=(oldCtrl[1] & 0b00000100) and (ctrl[1] & 0b00000100)): # Run repeatable science experiments
         DoneExperimentList = []
         for Experiment in vessel.parts.experiments:
             if (Experiment.has_data == False) and (Experiment.rerunnable == True) and (Experiment.available == True) and (Experiment.inoperable == False):
@@ -122,7 +122,7 @@ def actions(ctrl, oldCtrl, vessel, partlist):
                     except:
                         pass
      
-    if ((ctrl[1] & 0b00001000) !=(oldCtrl[1] & 0b00001000)): # Run all science experiments
+    if ((ctrl[1] & 0b00001000) !=(oldCtrl[1] & 0b00001000) and (ctrl[1] & 0b00001000)): # Run all science experiments
         DoneExperimentList = []
         for Experiment in vessel.parts.experiments:
             if (Experiment.has_data == False) and (Experiment.available == True) and (Experiment.inoperable == False):
