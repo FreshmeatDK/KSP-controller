@@ -6,10 +6,30 @@ import time
 import serial
 import struct
 from controls import actions, camcontrol
+from status import getStatus
 
-conn = krpc.connect(name='Controller')
+running = True
+conn = None
+arduino = None
+while conn is None or arduino is None:
+	#We do not know if the server is online, so we want python to try to connect.
+	try: 
+		#The next line starts the connection with the server. It describes itself to the game as controller.
+		conn = krpc.connect(name='Controller')
+		#Now let's connect to the Arduino
+		arduino = serial.Serial('COM16', 38400)
+	except ConnectionRefusedError: #error raised whe failing to connect to the server.
+		print("Server offline")
+		time.sleep(5) #sleep 5 seconds
+		conn = None
+		arduino = None
+	except serial.SerialException: #error raised when failling to connect to an arduino
+		#TIPP: check if the Arduino serial monitor is off! or any other program using the arduino
+		print("Arduino Connection Error.")	
+		time.sleep(5)
+		conn = None
+		arduino = None
 
-arduino = serial.Serial('COM16', 38400)
 
 def listMainParts(vessel):
     root = vessel.parts.root
@@ -24,26 +44,47 @@ def listMainParts(vessel):
     return list
 
 def main_loop():
+    #----------------dict to hold vesseldata from streams
+    vInfo = {}
+    #----------------streams
+
+    
+    mass = conn.add_stream(getattr, vessel, 'mass')
+    
+    maxThrust = conn.add_stream(getattr, vessel, 'max_thrust')
+
+
+
+    #----------------Vars
     ctrl = [0,0]
     oldCtrl = [0,0]
     connected = False
     ctrl[0] = 0
     ctrl[1] = 0
+
     mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
-    time.sleep(1)
+    
     updateTime = time.perf_counter()
     initTime = time.perf_counter()
     engineCheckTime = time.perf_counter()
-    print('init')
+    
     flameOut = False
+
 
     try:
       while vessel == conn.space_center.active_vessel:
           now = time.perf_counter()
-          errorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = overflow
-          
+          DataErrorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = bad data
+          overflow = False
+
+          vInfo['mass']=mass()
+          vInfo['mxThr']=maxThrust()
+
+          status= getStatus(vInfo)
+
+
           if (now - engineCheckTime > 1): #check for flameout every second.engines
-            decoupleList = vessel.parts.in_decouple_stage(vessel.control.current_stage-1)
+            #decoupleList = vessel.parts.in_decouple_stage(vessel.control.current_stage-1)
             engineList = vessel.parts.engines
             flameOut = False
             for Engine in engineList:
@@ -55,14 +96,16 @@ def main_loop():
             inData=struct.unpack('<B',arduino.read())
             ctrlByteNum = 0
             if arduino.in_waiting > 80:
-                arduino.write(0b10101010) #send wait to arduino
+                #arduino.write(0b10101010) #send wait to arduino
                 print("overflow: ",arduino.in_waiting)
                 conn.ui.message("Overflow", position = conn.ui.MessagePosition.top_left)
                 arduino.reset_input_buffer()
+                overflow = True
             elif (now - updateTime) > 0.1:
                   updateTime = time.perf_counter()
                   conn.ui.message("Ack", position = conn.ui.MessagePosition.top_left)
-                  arduino.write(0b01010101)
+                  #arduino.write(0b01010101)
+               
  
             for i in range(2):
                 oldCtrl[i] = ctrl[i]
@@ -79,8 +122,8 @@ def main_loop():
                         inData=struct.unpack('<B',arduino.read())
                     if inData[0] == 0b11001100: #EOF char
                         readOp = False
-                        if (ctrlByteNum == 2 and errorcode == 1): #if we have reached two bytes
-                            errorcode = 0
+                        if (ctrlByteNum == 2 and DataErrorcode == 1): #if we have reached two bytes
+                            DataErrorcode = 0
 
                     elif inData[0] == 0b00001111: #escape char
                         inData=struct.unpack('<B',arduino.read())     #read another
@@ -88,16 +131,16 @@ def main_loop():
                         ctrlByteNum += 1
                         if ctrlByteNum > 1:
                             ctrlByteNum = 1
-                            errorcode = 2
+                            DataErrorcode = 2
                     else:                               #not esc, not EOF
                         if ctrlByteNum > 1:
                             ctrlByteNum = 1
-                            errorcode = 2
+                            DataErrorcode = 2
                         ctrl[ctrlByteNum] = inData[0]
                         ctrlByteNum += 1
 
 
-            if errorcode == 0: # we have success, run commands
+            if DataErrorcode == 0: # we have success, run commands
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ):
                     actions(ctrl,oldCtrl,vessel, mainParts)
@@ -107,8 +150,18 @@ def main_loop():
           elif (now - updateTime) > 1: #more than one second since last received comms from arduino
                   updateTime = time.perf_counter()
                   conn.ui.message("Arduino timeout", position = conn.ui.MessagePosition.top_left)
-                  arduino.write(0b01010101)
+                  #arduino.write(0b01010101)
 
+          if (now - updateTime) > 0.1: #send data to arduino
+              status[1]=int(flameOut)
+              status[1]=(status[1] & overflow << 1 )
+              print(status)
+
+              buff = struct.pack('<hBB',status[0],status[1],status[2])
+              arduino.write(0b01010101)
+              arduino.write(buff)
+              arduino.write(0b10101010)
+              
 
     except krpc.error.RPCError:
         print("Error")
@@ -117,7 +170,7 @@ def main_loop():
 
 
 
-while True:
+while running == True:
     vessel = None
 
     while vessel==None:
