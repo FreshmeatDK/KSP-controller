@@ -44,6 +44,9 @@ def listMainParts(vessel):
     return list
 
 def main_loop():
+    
+    #cam.mode=cam.mode.automatic
+
     #----------------dict to hold vesseldata from streams
     vInfo = {}
     #----------------streams
@@ -52,8 +55,7 @@ def main_loop():
     mass = conn.add_stream(getattr, vessel, 'mass')
     
     maxThrust = conn.add_stream(getattr, vessel, 'max_thrust')
-
-
+    
 
     #----------------Vars
     ctrl = [0,0]
@@ -65,14 +67,18 @@ def main_loop():
     mainParts = listMainParts(vessel) #some actions only in parts not connected by docking ports
     
     updateTime = time.perf_counter()
+    sendDataTime = updateTime
     initTime = time.perf_counter()
     engineCheckTime = time.perf_counter()
     
     flameOut = False
-
-
+    time.sleep(2)
+    cam = conn.space_center.camera
+    
     try:
       while vessel == conn.space_center.active_vessel:
+          
+
           now = time.perf_counter()
           DataErrorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = bad data
           overflow = False
@@ -84,7 +90,6 @@ def main_loop():
 
 
           if (now - engineCheckTime > 1): #check for flameout every second.engines
-            #decoupleList = vessel.parts.in_decouple_stage(vessel.control.current_stage-1)
             engineList = vessel.parts.engines
             flameOut = False
             for Engine in engineList:
@@ -146,21 +151,24 @@ def main_loop():
                     actions(ctrl,oldCtrl,vessel, mainParts)
                     camera = (ctrl[0]&0b11100000)>>5
                     camcontrol(camera, cam)
+                    #initTime = time.perf_counter()
 
           elif (now - updateTime) > 1: #more than one second since last received comms from arduino
                   updateTime = time.perf_counter()
                   conn.ui.message("Arduino timeout", position = conn.ui.MessagePosition.top_left)
                   #arduino.write(0b01010101)
 
-          if (now - updateTime) > 0.1: #send data to arduino
+          if (now - sendDataTime) > 0.4: #send data to arduino
               status[1]=int(flameOut)
               status[1]=(status[1] & overflow << 1 )
+              sendDataTime = time.perf_counter()
               print(status)
 
-              buff = struct.pack('<hBB',status[0],status[1],status[2])
-              arduino.write(0b01010101)
+              buff = struct.pack('<BhBBB',85,status[0],status[1],status[2],170)
+              print(buff)
+              #arduino.write(0b01010101)
               arduino.write(buff)
-              arduino.write(0b10101010)
+              #arduino.write(0b10101010)
               
 
     except krpc.error.RPCError:
@@ -177,7 +185,7 @@ while running == True:
 
         try:
             vessel = conn.space_center.active_vessel
-            cam = conn.space_center.camera
+            
 
             print("Active vessel:"+vessel.name)
             main_loop()
