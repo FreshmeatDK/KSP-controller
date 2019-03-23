@@ -6,7 +6,7 @@ import time
 import serial
 import struct
 from controls import actions, camcontrol
-from status import getStatus
+from status import getStatus, getSOIbodynum
 
 running = True
 conn = None
@@ -51,10 +51,11 @@ def main_loop():
     vInfo = {}
     #----------------streams
 
-    
     mass = conn.add_stream(getattr, vessel, 'mass')
-    
     maxThrust = conn.add_stream(getattr, vessel, 'max_thrust')
+    sigContact = conn.add_stream(getattr, vessel.comms, 'can_communicate')
+    sigStr = conn.add_stream(getattr, vessel.comms, 'signal_strength')
+
     
 
     #----------------Vars
@@ -83,13 +84,8 @@ def main_loop():
           DataErrorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = bad data
           overflow = False
 
-          vInfo['mass']=mass()
-          vInfo['mxThr']=maxThrust()
-
-          status= getStatus(vInfo)
-
-
           if (now - engineCheckTime > 1): #check for flameout every second.engines
+            engineCheckTime = now
             engineList = vessel.parts.engines
             flameOut = False
             for Engine in engineList:
@@ -159,16 +155,27 @@ def main_loop():
                   #arduino.write(0b01010101)
 
           if (now - sendDataTime) > 0.4: #send data to arduino
-              status[1]=int(flameOut)
-              status[1]=(status[1] & overflow << 1 )
+              vInfo['mass']=mass()              # Get info to compute status
+              vInfo['mxThr']=maxThrust()
+              vInfo['sig']=sigContact()
+              vInfo['sigStr']=sigStr()
+
+              status= getStatus(vInfo)
+              status[2]=getSOIbodynum(vessel)
+
               sendDataTime = time.perf_counter()
+              status[1]=(status[1] | int(flameOut))
+              status[1]=(status[1] | int(overflow) << 1 )
+              status[2] = getSOIbodynum(vessel)
+              
+              print(vInfo['sigStr'])
               print(status)
 
               buff = struct.pack('<BhBBB',85,status[0],status[1],status[2],170)
               print(buff)
-              #arduino.write(0b01010101)
+              
               arduino.write(buff)
-              #arduino.write(0b10101010)
+              
               
 
     except krpc.error.RPCError:
