@@ -1,10 +1,13 @@
 # -*- coding: <utf_8> -*-
 
 import krpc
+import status
 import controls
 import time
 import serial
 import struct
+import utils
+from utils import autolanding
 from controls import actions, camcontrol
 from status import getStatus, getSOIbodynum
 
@@ -55,8 +58,10 @@ def main_loop():
     maxThrust = conn.add_stream(getattr, vessel, 'max_thrust')
     sigContact = conn.add_stream(getattr, vessel.comms, 'can_communicate')
     sigStr = conn.add_stream(getattr, vessel.comms, 'signal_strength')
-
-    
+    #refFrame = vessel.reference_frame
+    refFrame = vessel.orbit.body.reference_frame
+    #dir = conn.add_stream(getattr, vessel.flight(refFrame), 'direction')
+    #prograde = conn.add_stream(getattr,vessel.flight(refFrame), 'prograde')
 
     #----------------Vars
     ctrl = [0,0]
@@ -74,7 +79,7 @@ def main_loop():
     
     flameOut = False
     time.sleep(2)
-    cam = conn.space_center.camera
+    #cam = conn.space_center.camera
     
     try:
       while vessel == conn.space_center.active_vessel:
@@ -83,6 +88,10 @@ def main_loop():
           now = time.perf_counter()
           DataErrorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = bad data
           overflow = False
+
+          vessel.control.input_mode=vessel.control.input_mode.override
+          autolanding(vessel)
+          #vessel.control.input_mode=vessel.control.input_mode.additive
 
           if (now - engineCheckTime > 1): #check for flameout every second.engines
             engineCheckTime = now
@@ -145,8 +154,9 @@ def main_loop():
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ):
                     actions(ctrl,oldCtrl,vessel, mainParts)
-                    camera = (ctrl[0]&0b11100000)>>5
-                    camcontrol(camera, cam)
+
+                    #camera = (ctrl[0]&0b11100000)>>5
+                    #camcontrol(camera, cam)
                     #initTime = time.perf_counter()
 
           elif (now - updateTime) > 1: #more than one second since last received comms from arduino
@@ -159,6 +169,9 @@ def main_loop():
               vInfo['mxThr']=maxThrust()
               vInfo['sig']=sigContact()
               vInfo['sigStr']=sigStr()
+              #vInfo['dir']=dir()
+              #vInfo['dir']=vessel.flight(refFrame).direction
+              #vInfo['prograde']=vessel.flight(refFrame).prograde
 
               status= getStatus(vInfo)
               status[2]=getSOIbodynum(vessel)
@@ -166,10 +179,10 @@ def main_loop():
               sendDataTime = time.perf_counter()
               status[1]=(status[1] | int(flameOut))
               status[1]=(status[1] | int(overflow) << 1 )
-              status[2] = getSOIbodynum(vessel)
+              
               
               print(vInfo['sigStr'])
-              print(status)
+              print(bin(status[1]))
 
               buff = struct.pack('<BhBBB',85,status[0],status[1],status[2],170)
               print(buff)
@@ -189,7 +202,7 @@ while running == True:
     vessel = None
 
     while vessel==None:
-
+        time.sleep(.5)
         try:
             vessel = conn.space_center.active_vessel
             

@@ -1,17 +1,31 @@
 import krpc
+import math
+import numpy as np
+import numpy.linalg as la
 
 def getStatus(vInfo):
     status = [0,0,0]
+
+    
+    #dir = np.array(vInfo['dir'])
+    #prograde = np.array(vInfo['prograde'])
+
+
+    #dev=math.acos(vInfo['dir'][1])
+    #dev=math.acos(np.dot(dir,prograde))
+
     if vInfo['mass'] != 0:
         status[0] = int(vInfo['mxThr']/vInfo['mass']*100) #acceleration in cm/s
         if status[0]>65535:
           status[0] = 65535
     else: status[0] = 0
 
-    if vInfo['sig'] == False: mask = 0b00001100 # lvl 3 at bit 4-5
+    #print(dev, prograde, dir)
+
+    if vInfo['sigStr'] < 0.00001: mask = 0b00001100 # lvl 3 at bit 4-5
     elif vInfo['sigStr'] < 0.05: mask = 0b00001000 # lvl 2 at bit 4-5
     elif vInfo['sigStr'] < 0.25: mask = 0b0000100 # lvl 1 at bit 4-5
-    else: mask = 0b11110011                        # lvl 0 at bit 4-5 go green
+    else: mask = 0b00000000                        # lvl 0 at bit 4-5 go green
     status[1] = (status[1] & 0b11110011) | mask    # leave other bits, add result at bit 4-5
     return status
 
