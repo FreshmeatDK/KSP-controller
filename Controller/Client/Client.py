@@ -7,7 +7,7 @@ import time
 import serial
 import struct
 import utils
-from utils import autolanding
+from utils import autolanding, listMainParts
 from controls import actions, camcontrol
 from status import getStatus, getSOIbodynum
 
@@ -34,19 +34,8 @@ while conn is None or arduino is None:
 		arduino = None
 
 
-def listMainParts(vessel):
-    root = vessel.parts.root
-    list = []
-    stack = [root]
-    while stack:
-        part = stack.pop()
-        list.append(part)
-        for child in part.children:
-            if (child.name != 'dockingPort2') and (child.name != 'ConstructionPort1'):
-                stack.append(child)
-    return list
-
 def main_loop():
+    
     
     #cam.mode=cam.mode.automatic
 
@@ -55,7 +44,7 @@ def main_loop():
     #----------------streams
 
     mass = conn.add_stream(getattr, vessel, 'mass')
-    maxThrust = conn.add_stream(getattr, vessel, 'max_thrust')
+    maxThrust = conn.add_stream(getattr, vessel, 'available_thrust')
     sigContact = conn.add_stream(getattr, vessel.comms, 'can_communicate')
     sigStr = conn.add_stream(getattr, vessel.comms, 'signal_strength')
     #refFrame = vessel.reference_frame
@@ -88,10 +77,6 @@ def main_loop():
           now = time.perf_counter()
           DataErrorcode = 1          # 0 = success, 1 = unspec/timeout, 2 = bad data
           overflow = False
-
-          vessel.control.input_mode=vessel.control.input_mode.override
-          autolanding(vessel)
-          #vessel.control.input_mode=vessel.control.input_mode.additive
 
           if (now - engineCheckTime > 1): #check for flameout every second.engines
             engineCheckTime = now
@@ -153,7 +138,7 @@ def main_loop():
             if DataErrorcode == 0: # we have success, run commands
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ):
-                    actions(ctrl,oldCtrl,vessel, mainParts)
+                    actions(ctrl,oldCtrl,vessel, mainParts,conn)
 
                     #camera = (ctrl[0]&0b11100000)>>5
                     #camcontrol(camera, cam)
@@ -169,24 +154,13 @@ def main_loop():
               vInfo['mxThr']=maxThrust()
               vInfo['sig']=sigContact()
               vInfo['sigStr']=sigStr()
-              #vInfo['dir']=dir()
-              #vInfo['dir']=vessel.flight(refFrame).direction
-              #vInfo['prograde']=vessel.flight(refFrame).prograde
-
               status= getStatus(vInfo)
               status[2]=getSOIbodynum(vessel)
 
               sendDataTime = time.perf_counter()
               status[1]=(status[1] | int(flameOut))
               status[1]=(status[1] | int(overflow) << 1 )
-              
-              
-              print(vInfo['sigStr'])
-              print(bin(status[1]))
-
               buff = struct.pack('<BhBBB',85,status[0],status[1],status[2],170)
-              print(buff)
-              
               arduino.write(buff)
               
               

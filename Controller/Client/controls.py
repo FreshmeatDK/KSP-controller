@@ -1,7 +1,9 @@
 import krpc
+import utils
+from utils import autolanding
 
 
-def actions(ctrl, oldCtrl, vessel, partlist):
+def actions(ctrl, oldCtrl, vessel, partlist, conn):
     if ((ctrl[0] & 0b00001000) != (oldCtrl[0] & 0b00001000)): # Solar panels
         solar=(ctrl[0] & 0b00001000)
         if solar:
@@ -133,7 +135,12 @@ def actions(ctrl, oldCtrl, vessel, partlist):
                         DoneExperimentList.append(ExpPart.name)
                     except:
                         pass
-    
+
+    if ((ctrl[1] & 0b00010000) == True): # Execute autolander routine
+          vessel.control.input_mode=vessel.control.input_mode.override
+          autolanding(vessel, conn)
+          vessel.control.input_mode=vessel.control.input_mode.additive
+
 def camcontrol(camera, cam):
      if camera == 1:
         if cam.mode != cam.mode.automatic:
