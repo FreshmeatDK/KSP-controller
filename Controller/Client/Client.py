@@ -139,6 +139,7 @@ def main_loop():
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ):
                     actions(ctrl,oldCtrl,vessel, mainParts,conn)
+                    print(ctrl[1] & 0b00010000)
 
                     #camera = (ctrl[0]&0b11100000)>>5
                     #camcontrol(camera, cam)

@@ -136,10 +136,11 @@ def actions(ctrl, oldCtrl, vessel, partlist, conn):
                     except:
                         pass
 
-    if ((ctrl[1] & 0b00010000) == True): # Execute autolander routine
-          vessel.control.input_mode=vessel.control.input_mode.override
-          autolanding(vessel, conn)
-          vessel.control.input_mode=vessel.control.input_mode.additive
+    if ((ctrl[1] & 0b00010000) == 0b10000): # Execute autolander routine
+        print("debug")
+        vessel.control.input_mode=vessel.control.input_mode.override
+        autolanding(vessel, conn)
+        vessel.control.input_mode=vessel.control.input_mode.additive
 
 def camcontrol(camera, cam):
      if camera == 1:
