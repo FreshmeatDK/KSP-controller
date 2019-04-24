@@ -25,6 +25,9 @@
     <Compile Include="controls.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="serialcomms.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="status.py">
       <SubType>Code</SubType>
     </Compile>

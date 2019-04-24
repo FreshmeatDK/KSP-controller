@@ -15,7 +15,7 @@ def getStatus(vInfo):
     #dev=math.acos(np.dot(dir,prograde))
 
     if vInfo['mass'] != 0:
-        status[0] = int(vInfo['mxThr']/vInfo['mass']*100) #acceleration in cm/s
+        status[0] = vInfo['a'] #acceleration in cm/s
         if status[0]>65535:
           status[0] = 65535
     else: status[0] = 0
