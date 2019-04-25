@@ -91,10 +91,12 @@ def main_loop():
           vInfo['sigStr'] = sigStr()
           vInfo['g'] = g()
           if vInfo['mass'] != 0:
-            vInfo['a'] = int(vInfo['mxThr']/vInfo['mass']*100) #acceleration in cm/s
+            vInfo['a'] = vInfo['mxThr']/vInfo['mass']
+          else:
+            vInfo['a'] = 0
 
                     
-          if (now - engineCheckTime > 1): #check for flameout every second.engines
+          if (now - engineCheckTime > 1):                                         #check for flameout every second.engines
             engineCheckTime = now
             engineList = vessel.parts.engines
             flameOut = False
@@ -115,8 +117,6 @@ def main_loop():
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ): #now - inittime: delay after connection to ensure KSP ready
                     actions(ctrl,oldCtrl,vessel, mainParts,conn)
-                    
-
                     #camera = (ctrl[0]&0b11100000)>>5
                     #camcontrol(camera, cam)
 
@@ -137,10 +137,9 @@ def main_loop():
           
           if autolanderStage > 0:
               ap.engage()
-              autolanderStage =autolander_new(vessel, vInfo, ap, autolanderStage)
+              autolanderStage = autolander_new(vessel, vInfo, ap, autolanderStage)
           else:
               ap.disengage()
-
 
           if (now - sendDataTime) > 0.4: #send data to arduino
 
@@ -152,8 +151,6 @@ def main_loop():
               status[1]=(status[1] | int(overflow) << 1 )
               buff = struct.pack('<BhBBB',85,status[0],status[1],status[2],170)
               arduino.write(buff)
-              
-              
 
     except krpc.error.RPCError:
         print("Error")

@@ -13,11 +13,11 @@ def serialReceive(arduino, conn):
     if arduino.in_waiting > 80:
         #arduino.write(0b10101010) #send wait to arduino
         print("overflow: ",arduino.in_waiting)
-        conn.ui.message("Overflow", position = conn.ui.MessagePosition.top_left)
+        #conn.ui.message("Overflow", position = conn.ui.MessagePosition.top_left)
         arduino.reset_input_buffer()
         overflow = 0
-    else:
-        conn.ui.message("Ack", position = conn.ui.MessagePosition.top_left)
+    #else:          # Acknowledge that we have data, disabled for now
+        #conn.ui.message("Ack", position = conn.ui.MessagePosition.top_left)
         #arduino.write(0b01010101)
 
     if inData[0] == 0b10101010: #start char

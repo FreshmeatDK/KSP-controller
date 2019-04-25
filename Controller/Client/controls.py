@@ -83,9 +83,9 @@ def actions(ctrl, oldCtrl, vessel, partlist, conn):
 
     if ((ctrl[1] & 0b00000001) !=(oldCtrl[1] & 0b00000001)): # Switch engine mode
         engine =(ctrl[1] & 0b00000001)
-        print('diff')
+        #print('diff')
         if engine:
-            print('yes')
+            #print('yes')
             for Engine in vessel.parts.engines:
                 try:
                     Engine.mode='AirBreathing'
@@ -97,7 +97,7 @@ def actions(ctrl, oldCtrl, vessel, partlist, conn):
                     pass
 
         else:
-            print('no')
+            #print('no')
             for Engine in vessel.parts.engines:
                 try:
                     Engine.mode='ClosedCycle'

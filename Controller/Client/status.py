@@ -6,21 +6,9 @@ import numpy.linalg as la
 def getStatus(vInfo):
     status = [0,0,0]
 
-    
-    #dir = np.array(vInfo['dir'])
-    #prograde = np.array(vInfo['prograde'])
-
-
-    #dev=math.acos(vInfo['dir'][1])
-    #dev=math.acos(np.dot(dir,prograde))
-
-    if vInfo['mass'] != 0:
-        status[0] = vInfo['a'] #acceleration in cm/s
-        if status[0]>65535:
-          status[0] = 65535
-    else: status[0] = 0
-
-    #print(dev, prograde, dir)
+    status[0] = int(0.01* vInfo['a']) #acceleration in cm/s
+    if status[0]>65535:
+      status[0] = 65535
 
     if vInfo['sigStr'] < 0.00001: mask = 0b00001100 # lvl 3 at bit 4-5
     elif vInfo['sigStr'] < 0.05: mask = 0b00001000 # lvl 2 at bit 4-5
