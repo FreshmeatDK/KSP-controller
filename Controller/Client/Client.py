@@ -9,7 +9,7 @@ import struct
 import utils
 import serialcomms
 from serialcomms import serialReceive
-from utils import autolanding, listMainParts, autolander_new
+from utils import listMainParts, autoDescent
 from controls import actions, camcontrol
 from status import getStatus, getSOIbodynum
 
@@ -63,10 +63,12 @@ def main_loop():
     engineCheckTime = time.perf_counter()
     
     flameOut = False
-    autolanderStage = 0
+    autoDescentStage = 0
+    overflow = 1                # Serial overflow from arduino
+    abortPressed = False
     time.sleep(2)
     #cam = conn.space_center.camera
-    overflow = 1                # Serial overflow from arduino
+    
     
     try:
       while vessel == conn.space_center.active_vessel:
@@ -113,31 +115,43 @@ def main_loop():
                   ctrl = serialReceive(arduino, conn)
                   updateTime = time.perf_counter()
 
-          if (ctrl[2]& 0b00000111) == 0: # we have success, run commands
+          overflow = (ctrl[2] & 0b10000000) >> 7
+          if (ctrl[2]& 0b00000111) == 0 and overflow == 0: # we have success, run commands
 
                 if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ): #now - inittime: delay after connection to ensure KSP ready
                     actions(ctrl,oldCtrl,vessel, mainParts,conn)
                     #camera = (ctrl[0]&0b11100000)>>5
                     #camcontrol(camera, cam)
 
+                    if ((ctrl[1] & 0b00010000) == 0b10000): # Execute autoDescent routine
+                        if autoDescentStage == 0:
+                          autoDescentStage = 1
+
+                    if ((ctrl[1] & 0b00100000) != (oldCtrl[1] & 0b00100000) and (ctrl[1] & 0b00100000) == 0b00100000): # Abort
+              
+                        if autoDescentStage != 0 and ((ctrl[1] & 0b00100000) == 0b00100000):
+                            autoDescentStage = 0
+                            print('fire')
+                            ap.disengage()
+                            vessel.control.throttle = 0
+                    else: 
+                        vessel.control.abort = bool((ctrl[1] & 0b00100000))
+                        if bool((ctrl[1] & 0b00100000)): print('abort')
+
           else:
             for i in range(3): # reset ctrl
                 ctrl[i] = oldCtrl[i]
-            if (now - updateTime) > 1: #more than one second since last received comms from arduino
+          if (now - updateTime) > 1: #more than one second since last received comms from arduino
                 updateTime = time.perf_counter()
                 conn.ui.message("Arduino timeout", position = conn.ui.MessagePosition.top_left)
                 #arduino.write(0b01010101)
           
-          overflow = (ctrl[2] & 0b10000000) >> 7
           
-          if ((ctrl[1] & 0b00010000) == 0b10000): # Execute autolander routine
-              #print("debug")
-              if autolanderStage == 0:
-                  autolanderStage = 1
-          
-          if autolanderStage > 0:
+
+
+          if autoDescentStage > 0:
               ap.engage()
-              autolanderStage = autolander_new(vessel, vInfo, ap, autolanderStage)
+              autoDescentStage = autoDescent(vessel, vInfo, ap, autoDescentStage)
           else:
               ap.disengage()
 

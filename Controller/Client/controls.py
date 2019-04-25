@@ -1,7 +1,4 @@
 import krpc
-import utils
-from utils import autolanding
-
 
 def actions(ctrl, oldCtrl, vessel, partlist, conn):
     if ((ctrl[0] & 0b00001000) != (oldCtrl[0] & 0b00001000)): # Solar panels
