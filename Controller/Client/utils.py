@@ -50,11 +50,11 @@ def autoDescent(vessel, vInfo, ap, s):
 
         if vInfo['alt']<10:
             if vInfo['v_vert'] < -2:
-                thr = (2-vInfo['v_vert'])/2
+                thr = (vInfo['g']-vInfo['v_vert'])/vInfo['a']
             else:
                 thr = v_rate
 
-        elif v_rate > 0.8 :
+        elif v_rate > 0.7 :
             if vInfo['v_vert'] < -4:
                 thr = v_rate*1.2
             else:
@@ -63,8 +63,8 @@ def autoDescent(vessel, vInfo, ap, s):
             thr = 0
         vessel.control.throttle = thr
         #
-        #print(thr, vInfo['alt'], vInfo['v_vert'])
-        if vInfo['alt'] < 1:
+        #print(vInfo['sit'], vInfo['alt'])
+        if vInfo['alt'] < 1 or vInfo['sit'] == 'VesselSituation.landed' :
             s = 0
             
 

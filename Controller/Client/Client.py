@@ -47,6 +47,7 @@ def main_loop():
     sigContact = conn.add_stream(getattr, vessel.comms, 'can_communicate')
     sigStr = conn.add_stream(getattr, vessel.comms, 'signal_strength')
     g = conn.add_stream(getattr, body, 'surface_gravity')
+    sit = conn.add_stream(getattr, vessel, 'situation')
                              
 
 
@@ -92,6 +93,7 @@ def main_loop():
           vInfo['sig'] = sigContact()
           vInfo['sigStr'] = sigStr()
           vInfo['g'] = g()
+          vInfo['sit'] = sit()
           if vInfo['mass'] != 0:
             vInfo['a'] = vInfo['mxThr']/vInfo['mass']
           else:
