@@ -33,6 +33,8 @@ def main_loop():
     flight = vessel.flight(refFrame)
     flightS = vessel.flight(vessel.surface_reference_frame)
 
+
+
     ap = vessel.auto_pilot
 
     dPitch = conn.add_stream(getattr, ap, 'pitch_error')
@@ -113,7 +115,7 @@ def main_loop():
             oldCtrl[i] = ctrl[i]      
           
           if arduino.in_waiting > 0:
-              if (now - updateTime) > 0.025 or overflow == 1:
+              if (now - updateTime) > 0.01 or overflow == 1:
                   ctrl = serialReceive(arduino, conn)
                   updateTime = time.perf_counter()
 
