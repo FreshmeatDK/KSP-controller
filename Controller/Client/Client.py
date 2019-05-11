@@ -111,40 +111,44 @@ def main_loop():
                     flameOut = True
                     print('Flameout')
 
-          for i in range(3):
-            oldCtrl[i] = ctrl[i]      
+          #for i in range(3):
+          #  oldCtrl[i] = ctrl[i]      
           
           if arduino.in_waiting > 0:
               if (now - updateTime) > 0.01 or overflow == 1:
-                  ctrl = serialReceive(arduino, conn)
+                  tmpCtrl = serialReceive(arduino, conn)
                   updateTime = time.perf_counter()
 
-          overflow = (ctrl[2] & 0b10000000) >> 7
-          if (ctrl[2]& 0b00000111) == 0 and overflow == 0: # we have success, run commands
+          
+              if (tmpCtrl[3]& 0b00000111) == 0: # we have success, run commands
+                    for i in range(2):
+                        oldCtrl[i] = ctrl[i]
+                        ctrl[i] = tmpCtrl[i]
 
-                if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ): #now - inittime: delay after connection to ensure KSP ready
-                    actions(ctrl,oldCtrl,vessel, mainParts,conn)
-                    #camera = (ctrl[0]&0b11100000)>>5
-                    #camcontrol(camera, cam)
+                    if ((ctrl[0] != oldCtrl[0]) or (ctrl[1] != oldCtrl[1]) and now-initTime > 1 ): #now - inittime: delay after connection to ensure KSP ready
+                        actions(ctrl,oldCtrl,vessel, mainParts,conn)
+                        #camera = (ctrl[0]&0b11100000)>>5
+                        #camcontrol(camera, cam)
 
-                    if ((ctrl[1] & 0b00010000) == 0b10000): # Execute autoDescent routine
-                        if autoDescentStage == 0:
-                          autoDescentStage = 1
+                        if ((ctrl[1] & 0b00010000) == 0b10000): # Execute autoDescent routine
+                            if autoDescentStage == 0:
+                              autoDescentStage = 1
 
-                    if ((ctrl[1] & 0b00100000) != (oldCtrl[1] & 0b00100000) and (ctrl[1] & 0b00100000) == 0b00100000): # Abort
+                        if ((ctrl[1] & 0b00100000) != (oldCtrl[1] & 0b00100000) and (ctrl[1] & 0b00100000) == 0b00100000): # Abort
               
-                        if autoDescentStage != 0 and ((ctrl[1] & 0b00100000) == 0b00100000):
-                            autoDescentStage = 0
-                            print('fire')
-                            ap.disengage()
-                            vessel.control.throttle = 0
-                    else: 
-                        vessel.control.abort = bool((ctrl[1] & 0b00100000))
-                        if bool((ctrl[1] & 0b00100000)): print('abort')
+                            if autoDescentStage != 0 and ((ctrl[1] & 0b00100000) == 0b00100000):
+                                autoDescentStage = 0
+                                print('fire')
+                                ap.disengage()
+                                vessel.control.throttle = 0
+                        else: 
+                            vessel.control.abort = bool((ctrl[1] & 0b00100000))
+                            if bool((ctrl[1] & 0b00100000)): print('abort')
 
-          else:
-            for i in range(3): # reset ctrl
-                ctrl[i] = oldCtrl[i]
+              else:
+                for i in range(3): # reset ctrl
+                    #ctrl[i] = oldCtrl[i]
+                    print('fire')
           if (now - updateTime) > 1: #more than one second since last received comms from arduino
                 updateTime = time.perf_counter()
                 conn.ui.message("Arduino timeout", position = conn.ui.MessagePosition.top_left)
